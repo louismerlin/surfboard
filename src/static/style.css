@@ -1,0 +1,36 @@
+body {
+  font-size: 1.5rem;
+}
+
+td, th {
+  padding: 1rem;
+  vertical-align: top;
+}
+
+.container {
+    max-width: 194rem;
+}
+
+.border-left {
+  border-left: 0.3rem solid #121212;
+}
+
+.border-right {
+  border-right: 0.3rem solid #121212;
+}
+
+.up {
+  background-color: #00ff0044;
+}
+
+.down, .faulty {
+  background-color: #ff000044;
+}
+
+.flag {
+  background-color: #ffff0044;
+}
+
+.recovering {
+  background-color: #0000ff44;
+}
