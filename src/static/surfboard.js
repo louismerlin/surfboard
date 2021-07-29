@@ -1,20 +1,44 @@
 import { html, useState, useEffect, render } from 'https://unpkg.com/htm/preact/standalone.module.js'
 
-const { fetch } = global
+const { fetch, Math } = window
 
 function App () {
+  const [allScoreboards, setAllScoreboards] = useState({})
   const [teams, setTeams] = useState([])
   const [services, setServices] = useState([])
   const [statuses, setStatuses] = useState([])
+  const [allTicks, setAllTicks] = useState([1])
+  const [tick, setTick] = useState(1)
+
   useEffect(async () => {
     const res = await fetch('/scoreboard')
-    const scoreboard = await res.json()
-    setTeams(scoreboard.teams)
-    setServices(scoreboard.services)
-    setStatuses(scoreboard.statuses)
+    const scoreboards = await res.json()
+    setAllTicks(Object.keys(scoreboards).sort())
+    setAllScoreboards(scoreboards)
+    setTick(Math.max(...Object.keys(scoreboards)))
   }, [])
+
+  useEffect(() => {
+    const currentScoreboard = allScoreboards[tick]
+    if (currentScoreboard) {
+      setTeams(currentScoreboard.teams)
+      setServices(currentScoreboard.services)
+      setStatuses(currentScoreboard.statuses)
+    }
+  }, [tick])
+
   return html`
-    <h1>🏄 surfboard</h1>
+    <div class="row fixed">
+      <div class="column">
+        <h1>🏄 surfboard</h1>
+      </div>
+      <div class="column large">
+        <input type="range" onInput=${e => setTick(e.target.value)} min="${allTicks[0]}" max="${allTicks[allTicks.length - 1]}" value="${tick}" class="slider" step="1" />
+      </div>
+      <div class="column">
+        <h1>tick ${tick}</h1>
+      </div>
+    </div>
     <table>
       <thead>
         <tr>

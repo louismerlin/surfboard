@@ -2,6 +2,10 @@ body {
   font-size: 1.5rem;
 }
 
+table {
+  padding-top: 8rem;
+}
+
 td, th {
   padding: 1rem;
   vertical-align: top;
@@ -33,4 +37,27 @@ td, th {
 
 .recovering {
   background-color: #0000ff44;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  width: 98%;
+  justify-content: space-between;
+}
+
+.large {
+  flex-grow: 5;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.fixed {
+  position: fixed;
+  background-color: white;
+}
+
+input[type=range] {
+  margin: 0 auto;
+  width: 80%;
 }

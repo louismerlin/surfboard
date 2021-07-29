@@ -1,4 +1,5 @@
 # surfboard config
 scoreboard_url: https://2021.faustctf.net/competition/scoreboard.json
 tick_time: 3 # in minutes
-pickle_file: database.pickle
+refresh_rate: 10 # in seconds
+json_file: faust.json
