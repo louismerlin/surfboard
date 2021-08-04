@@ -1,0 +1,167 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>🏄 surfboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://unpkg.com/normalize.css">
+    <link rel="stylesheet" href="https://unpkg.com/concrete.css">
+    <style>
+body {
+  font-size: 1.5rem;
+}
+
+table {
+  padding-top: 8rem;
+}
+
+td, th {
+  padding: 1rem;
+  vertical-align: top;
+}
+
+.container {
+    max-width: 194rem;
+}
+
+.border-left {
+  border-left: 0.3rem solid #121212;
+}
+
+.border-right {
+  border-right: 0.3rem solid #121212;
+}
+
+.up {
+  background-color: #00ff0044;
+}
+
+.down, .faulty {
+  background-color: #ff000044;
+}
+
+.flag {
+  background-color: #ffff0044;
+}
+
+.recovering {
+  background-color: #0000ff44;
+}
+
+.row {
+  display: flex;
+  flex-direction: row;
+  width: 98%;
+  justify-content: space-between;
+}
+
+.large {
+  flex-grow: 5;
+  margin-top: 2rem;
+  text-align: center;
+}
+
+.fixed {
+  position: fixed;
+  background-color: white;
+}
+
+input[type=range] {
+  margin: 0 auto;
+  width: 80%;
+}
+    </style>
+</head>
+<body>
+    <main>
+        <section id="container" class="container">
+        </section>
+    </main>
+
+<script type="module">
+
+import { html, useState, useEffect, render } from 'https://unpkg.com/htm/preact/standalone.module.js'
+
+const { fetch, Math } = window
+
+function App () {
+  const [allScoreboards, setAllScoreboards] = useState({})
+  const [teams, setTeams] = useState([])
+  const [services, setServices] = useState([])
+  const [allTicks, setAllTicks] = useState([1])
+  const [scores, setScores] = useState([])
+  const [tick, setTick] = useState(1)
+
+  useEffect(async () => {
+    const res = await fetch('https://oooverflow.io/dc-ctf-2020-finals/final_tick.json')
+    const scoreboards = await res.json()
+    setAllTicks(scoreboards.ticks)
+    setAllScoreboards(scoreboards)
+    setTick(scoreboards.current_tick)
+  }, [])
+
+  useEffect(() => {
+    const currentScoreboard = allScoreboards[tick]
+    if (currentScoreboard) {
+      setTeams(currentScoreboard.teams)
+      setServices(currentScoreboard.services)
+    }
+  }, [tick])
+
+  return html`
+    <div class="row fixed">
+      <div class="column">
+        <h1>🏄 surfboard</h1>
+      </div>
+      <div class="column large">
+        <input type="range" onInput=${e => setTick(e.target.value)} min="${allTicks[0].id}" max="${allTicks[allTicks.length - 1].id}" value="${tick}" class="slider" step="1" />
+      </div>
+      <div class="column">
+        <h1>tick ${tick}</h1>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+        <th>#</th>
+        <th class="border-right">Team</th>
+        ${services.map(service => html`
+          <th>${service.name}</th>
+        `)}
+        <th class="border-left">🔥 Total Offense</th>
+        <th>🏰 Total Defense</th>
+        <th class="border-right">⏱️ Total SLA</th>
+        <th>Total</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        ${teams.map(team => html`
+          <tr>
+            <td><b>${team.rank}</b></td>
+            <td class="border-right"><b>${team.name}</b></td>
+            ${team.services.map(service => html`
+              <td class="${statuses[service.status]}">
+                🔥 ${service.offense.toFixed(2)}<br />
+                🏰 ${service.defense.toFixed(2)}<br />
+                👑 ${service.sla.toFixed(2)}<br />
+                ${statuses[service.status]}
+              </td>
+            `)}
+            <td class="border-left">${team.offense.toFixed(2)}</td>
+            <td>${team.defense.toFixed(2)}</td>
+            <td class="border-right">${team.sla.toFixed(2)}</td>
+            <td>${team.total.toFixed(2)}</td>
+          </tr>
+        `)}
+      </tbody>
+    </table>
+`
+}
+
+render(html`<${App} />`, document.getElementById('container'))
+
+</script>
+</body>
+</html>
