@@ -86,26 +86,51 @@ import { html, useState, useEffect, render } from 'https://unpkg.com/htm/preact/
 const { fetch, Math } = window
 
 function App () {
-  const [allScoreboards, setAllScoreboards] = useState({})
+  const [allScores, setAllScores] = useState([])
   const [teams, setTeams] = useState([])
   const [services, setServices] = useState([])
   const [allTicks, setAllTicks] = useState([1])
-  const [scores, setScores] = useState([])
+  const [score, setScore] = useState([])
   const [tick, setTick] = useState(1)
+
+  function computeAllScores(scoreboards) {
+      return scoreboards.ticks.map(({ id: tickId }) => {
+        return scoreboards.teams.map(({ id: teamId }) => {
+            const scores = scoreboards.scores.reduce((acc, { tick_id, teams }) => {
+              if (tick_id <= tickId) {
+                const score = Object.values(teams).find(({ id }) => id == teamId)
+                return {
+                  ATTACK: acc.ATTACK + score.ATTACK,
+                  DEFENSE: acc.DEFENSE + score.DEFENSE,
+                  KING_OF_THE_HILL: acc.KING_OF_THE_HILL + score.KING_OF_THE_HILL
+                }
+              }
+              return acc
+            }, { ATTACK: 0, DEFENSE: 0, KING_OF_THE_HILL: 0 })
+            // const services = scoreboards.exploitation_events.map() + scoreboards.koh_rankings.map()
+            return { name: scoreboards.teams.find(({ id }) => id == teamId).name, scores }
+        })
+      })
+  }
+
+  function computeTotal(score) {
+    return score.ATTACK + score.DEFENSE + score.KING_OF_THE_HILL
+  }
 
   useEffect(async () => {
     const res = await fetch('https://oooverflow.io/dc-ctf-2020-finals/final_tick.json')
     const scoreboards = await res.json()
     setAllTicks(scoreboards.ticks)
-    setAllScoreboards(scoreboards)
+    setTeams(scoreboards.teams)
+    setServices(scoreboards.services)
+    setAllScores(computeAllScores(scoreboards))
     setTick(scoreboards.current_tick)
   }, [])
 
   useEffect(() => {
-    const currentScoreboard = allScoreboards[tick]
-    if (currentScoreboard) {
-      setTeams(currentScoreboard.teams)
-      setServices(currentScoreboard.services)
+    const currentScore = allScores[tick - 1]
+    if (currentScore) {
+        setScore(currentScore)
     }
   }, [tick])
 
@@ -131,28 +156,21 @@ function App () {
         `)}
         <th class="border-left">🔥 Total Offense</th>
         <th>🏰 Total Defense</th>
-        <th class="border-right">⏱️ Total SLA</th>
+        <th class="border-right">👑 Total KoH</th>
         <th>Total</th>
         </tr>
       </thead>
 
       <tbody>
-        ${teams.map(team => html`
+        ${score.sort((a, b) => computeTotal(b.scores) - computeTotal(a.scores)).map((team, rank) => html`
           <tr>
-            <td><b>${team.rank}</b></td>
+            <td><b>${rank + 1}</b></td>
             <td class="border-right"><b>${team.name}</b></td>
-            ${team.services.map(service => html`
-              <td class="${statuses[service.status]}">
-                🔥 ${service.offense.toFixed(2)}<br />
-                🏰 ${service.defense.toFixed(2)}<br />
-                👑 ${service.sla.toFixed(2)}<br />
-                ${statuses[service.status]}
-              </td>
-            `)}
-            <td class="border-left">${team.offense.toFixed(2)}</td>
-            <td>${team.defense.toFixed(2)}</td>
-            <td class="border-right">${team.sla.toFixed(2)}</td>
-            <td>${team.total.toFixed(2)}</td>
+            ${services.map(service => html`<td>0</td>`)}
+            <td class="border-left">${team.scores.ATTACK}</td>
+            <td>${team.scores.DEFENSE}</td>
+            <td class="border-right">${team.scores.KING_OF_THE_HILL}</td>
+            <td>${computeTotal(team.scores)}</td>
           </tr>
         `)}
       </tbody>
