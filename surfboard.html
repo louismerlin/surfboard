@@ -33,19 +33,23 @@ td, th {
   border-right: 0.3rem solid #121212;
 }
 
-.up {
+.good {
   background-color: #00ff0044;
 }
 
-.down, .faulty {
-  background-color: #ff000044;
-}
-
-.flag {
+.ok {
   background-color: #ffff0044;
 }
 
-.recovering {
+.low {
+  background-color: #ff880044;
+}
+
+.bad {
+  background-color: #ff000044;
+}
+
+.retired {
   background-color: #0000ff44;
 }
 
@@ -96,25 +100,64 @@ function App () {
   function computeAllScores(scoreboards) {
       return scoreboards.ticks.map(({ id: tickId }) => {
         return scoreboards.teams.map(({ id: teamId }) => {
-            const scores = scoreboards.scores.reduce((acc, { tick_id, teams }) => {
-              if (tick_id <= tickId) {
-                const score = Object.values(teams).find(({ id }) => id == teamId)
+            const accumulatedScores = scoreboards.scores
+              .filter(s => s.tick_id <= tickId)
+              .reduce((acc, { tick_id, teams }) => {
+                const score = Object.values(teams).find(({ id }) => id === teamId)
                 return {
                   ATTACK: acc.ATTACK + score.ATTACK,
                   DEFENSE: acc.DEFENSE + score.DEFENSE,
                   KING_OF_THE_HILL: acc.KING_OF_THE_HILL + score.KING_OF_THE_HILL
                 }
-              }
-              return acc
-            }, { ATTACK: 0, DEFENSE: 0, KING_OF_THE_HILL: 0 })
-            // const services = scoreboards.exploitation_events.map() + scoreboards.koh_rankings.map()
-            return { name: scoreboards.teams.find(({ id }) => id == teamId).name, scores }
+              }, { ATTACK: 0, DEFENSE: 0, KING_OF_THE_HILL: 0 })
+            const servicesScore = scoreboards.exploitation_events
+              .filter(s => s.tick <= tickId && s.exploit_team_id === teamId && s.victim_team_id !== teamId)
+              .reduce((acc, { exploit_team_id, service_id, tick }) => {
+                if (!acc[service_id]) {
+                  acc[service_id] = 1
+                } else {
+                  acc[service_id] += 1
+                }
+                return acc
+              }, {})
+            const kohScores = scoreboards.koh_rankings
+              .filter(s => s.tick <= tickId)
+              .reduce((acc, cur) => {
+                if (!acc[cur.service_id]) {
+                  acc[cur.service_id] = computeKohScore(cur.results.find(({ team_id }) => team_id === teamId).rank)
+                } else {
+                  acc[cur.service_id] += computeKohScore(cur.results.find(({ team_id }) => team_id === teamId).rank)
+                }
+                return acc
+              }, {})
+            const scores = { ...servicesScore, ...kohScores }
+            return { name: scoreboards.teams.find(({ id }) => id === teamId).name, accumulatedScores, scores }
         })
       })
   }
 
-  function computeTotal(score) {
-    return score.ATTACK + score.DEFENSE + score.KING_OF_THE_HILL
+  function computeKohScore(rank) {
+    switch (rank) {
+    case 1:
+      return 10
+    case 2:
+      return 6
+    case 3:
+      return 3
+    case 4:
+      return 2
+    case 5:
+      return 1
+    default:
+      return 0
+    }
+  }
+
+  function computeTotal(score, scores) {
+    const ma = Math.max(Math.max(...scores.map(s => s.accumulatedScores.ATTACK)), 100)
+    const md = Math.max(Math.max(...scores.map(s => s.accumulatedScores.DEFENSE)), 100)
+    const mk = Math.max(Math.max(...scores.map(s => s.accumulatedScores.KING_OF_THE_HILL)), 100)
+    return 350 * score.ATTACK / ma + 350 * score.DEFENSE / md + 300 * score.KING_OF_THE_HILL / mk
   }
 
   useEffect(async () => {
@@ -152,7 +195,7 @@ function App () {
         <th>#</th>
         <th class="border-right">Team</th>
         ${services.map(service => html`
-          <th>${service.name}</th>
+          <th class="${service.service_indicator.toLowerCase()}">${service.type === "KING_OF_THE_HILL" ? "👑 " : ""}${service.name}</th>
         `)}
         <th class="border-left">🔥 Total Offense</th>
         <th>🏰 Total Defense</th>
@@ -162,15 +205,15 @@ function App () {
       </thead>
 
       <tbody>
-        ${score.sort((a, b) => computeTotal(b.scores) - computeTotal(a.scores)).map((team, rank) => html`
+        ${score.sort((a, b) => computeTotal(b.accumulatedScores, score) - computeTotal(a.accumulatedScores, score)).map((team, rank) => html`
           <tr>
             <td><b>${rank + 1}</b></td>
             <td class="border-right"><b>${team.name}</b></td>
-            ${services.map(service => html`<td>0</td>`)}
-            <td class="border-left">${team.scores.ATTACK}</td>
-            <td>${team.scores.DEFENSE}</td>
-            <td class="border-right">${team.scores.KING_OF_THE_HILL}</td>
-            <td>${computeTotal(team.scores)}</td>
+            ${services.map(service => html`<td>${team.scores[service.id]}</td>`)}
+            <td class="border-left">${team.accumulatedScores.ATTACK}</td>
+            <td>${team.accumulatedScores.DEFENSE}</td>
+            <td class="border-right">${team.accumulatedScores.KING_OF_THE_HILL}</td>
+            <td>${computeTotal(team.accumulatedScores, score).toFixed(0)}</td>
           </tr>
         `)}
       </tbody>
