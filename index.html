@@ -217,7 +217,7 @@ function App () {
   }
 
   useEffect(async () => {
-    async function getScoreboard() {
+    async function getScoreboard(firstTime) {
       const res = await fetch('http://10.13.37.7/game_state/game_state.json')
       const scoreboard = await res.json()
       setScoreboard(scoreboard)
@@ -225,9 +225,11 @@ function App () {
       setTeams(scoreboard.teams)
       setServices(scoreboard.services)
       setAllScores(computeAllScores(scoreboard))
-      setTick(scoreboard.current_tick)
+      if (firstTime) {
+        setTick(scoreboard.current_tick)
+      }
     }
-    getScoreboard()
+    getScoreboard(true)
     const interval = setInterval(getScoreboard, 15000)
     return () => clearInterval(interval)
   }, [])
