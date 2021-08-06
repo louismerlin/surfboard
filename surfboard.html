@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -31,6 +30,10 @@ td, th {
 
 .border-right {
   border-right: 0.3rem solid #121212;
+}
+
+.bold {
+  font-weight: bold;
 }
 
 .good {
@@ -96,22 +99,28 @@ function App () {
   const [allTicks, setAllTicks] = useState([1])
   const [score, setScore] = useState([])
   const [tick, setTick] = useState(1)
+  const [scoreboard, setScoreboard] = useState({})
 
-  function computeAllScores(scoreboards) {
-      return scoreboards.ticks.map(({ id: tickId }) => {
-        return scoreboards.teams.map(({ id: teamId }) => {
-            const accumulatedScores = scoreboards.scores
+  const [selectedTeam, setSelectedTeam] = useState()
+  const [selectedService, setSelectedService] = useState()
+  const [selectedKohRankings, setSelectedKohRankings] = useState([])
+  const [selectedExploitationEvents, setSelectedExploitationEvents] = useState([])
+
+  function computeAllScores(scoreboard) {
+      return scoreboard.ticks.map(({ id: tickId }) => {
+        return scoreboard.teams.map(({ id: teamId }) => {
+            const accumulatedScores = scoreboard.scores
               .filter(s => s.tick_id <= tickId)
               .reduce((acc, { tick_id, teams }) => {
-                const score = Object.values(teams).find(({ id }) => id === teamId)
+                const score = Object.values(teams).find(({ id }) => id == teamId)
                 return {
                   ATTACK: acc.ATTACK + score.ATTACK,
                   DEFENSE: acc.DEFENSE + score.DEFENSE,
                   KING_OF_THE_HILL: acc.KING_OF_THE_HILL + score.KING_OF_THE_HILL
                 }
               }, { ATTACK: 0, DEFENSE: 0, KING_OF_THE_HILL: 0 })
-            const servicesScore = scoreboards.exploitation_events
-              .filter(s => s.tick <= tickId && s.exploit_team_id === teamId && s.victim_team_id !== teamId)
+            const servicesScore = scoreboard.exploitation_events
+              .filter(s => s.tick <= tickId && s.exploit_team_id == teamId && s.victim_team_id !== teamId)
               .reduce((acc, { exploit_team_id, service_id, tick }) => {
                 if (!acc[service_id]) {
                   acc[service_id] = 1
@@ -120,18 +129,18 @@ function App () {
                 }
                 return acc
               }, {})
-            const kohScores = scoreboards.koh_rankings
+            const kohScores = scoreboard.koh_rankings
               .filter(s => s.tick <= tickId)
               .reduce((acc, cur) => {
                 if (!acc[cur.service_id]) {
-                  acc[cur.service_id] = computeKohScore(cur.results.find(({ team_id }) => team_id === teamId).rank)
+                  acc[cur.service_id] = computeKohScore(cur.results.find(({ team_id }) => team_id == teamId).rank)
                 } else {
-                  acc[cur.service_id] += computeKohScore(cur.results.find(({ team_id }) => team_id === teamId).rank)
+                  acc[cur.service_id] += computeKohScore(cur.results.find(({ team_id }) => team_id == teamId).rank)
                 }
                 return acc
               }, {})
             const scores = { ...servicesScore, ...kohScores }
-            return { name: scoreboards.teams.find(({ id }) => id === teamId).name, accumulatedScores, scores }
+            return { name: scoreboard.teams.find(({ id }) => id == teamId).name, teamId, accumulatedScores, scores }
         })
       })
   }
@@ -162,20 +171,23 @@ function App () {
 
   useEffect(async () => {
     const res = await fetch('https://oooverflow.io/dc-ctf-2020-finals/final_tick.json')
-    const scoreboards = await res.json()
-    setAllTicks(scoreboards.ticks)
-    setTeams(scoreboards.teams)
-    setServices(scoreboards.services)
-    setAllScores(computeAllScores(scoreboards))
-    setTick(scoreboards.current_tick)
+    const scoreboard = await res.json()
+    setScoreboard(scoreboard)
+    setAllTicks(scoreboard.ticks)
+    setTeams(scoreboard.teams)
+    setServices(scoreboard.services)
+    setAllScores(computeAllScores(scoreboard))
+    setTick(scoreboard.current_tick)
   }, [])
 
   useEffect(() => {
     const currentScore = allScores[tick - 1]
     if (currentScore) {
-        setScore(currentScore)
+      setScore(currentScore)
+      setSelectedKohRankings(scoreboard.koh_rankings.find(k => k.tick == tick && k.service_id == selectedService))
+      setSelectedExploitationEvents(scoreboard.exploitation_events.filter(e => e.tick == tick && e.service_id == selectedService && e.exploit_team_id == selectedTeam))
     }
-  }, [tick])
+  }, [tick, selectedTeam, selectedService])
 
   return html`
     <div class="row fixed">
@@ -195,7 +207,7 @@ function App () {
         <th>#</th>
         <th class="border-right">Team</th>
         ${services.map(service => html`
-          <th class="${service.service_indicator.toLowerCase()}">${service.type === "KING_OF_THE_HILL" ? "👑 " : ""}${service.name}</th>
+          <th class="${service.service_indicator.toLowerCase()}">${service.type == "KING_OF_THE_HILL" ? "👑 " : ""}${service.name}</th>
         `)}
         <th class="border-left">🔥 Total Offense</th>
         <th>🏰 Total Defense</th>
@@ -209,7 +221,12 @@ function App () {
           <tr>
             <td><b>${rank + 1}</b></td>
             <td class="border-right"><b>${team.name}</b></td>
-            ${services.map(service => html`<td>${team.scores[service.id]}</td>`)}
+            ${services.map(service => html`<td onClick=${() => {
+              setSelectedService(service.id)
+              setSelectedTeam(team.teamId)
+            }} class="${selectedService == service.id && selectedTeam == team.teamId ? "bold" : ""}">
+              ${team.scores[service.id]}
+            </td>`)}
             <td class="border-left">${team.accumulatedScores.ATTACK}</td>
             <td>${team.accumulatedScores.DEFENSE}</td>
             <td class="border-right">${team.accumulatedScores.KING_OF_THE_HILL}</td>
@@ -218,6 +235,24 @@ function App () {
         `)}
       </tbody>
     </table>
+    <div class="row">
+      <div>
+        tick : ${scoreboard.ticks && scoreboard.ticks.find(({ id }) => id == tick).created_on}
+      </div>
+      <div>
+        <p>${selectedService ? services.find(({ id }) => id == selectedService).type == "NORMAL" ? (
+          selectedExploitationEvents.map(e =>
+            html`<li>${e.created_on} : ${teams.find(({ id }) => id == e.exploit_team_id).name} exploited ${teams.find(({ id }) => id == e.victim_team_id).name}</li>`
+          )
+        ) : (
+          selectedKohRankings ? selectedKohRankings.results.map(r =>
+            html`<li>${teams.find(({ id }) => id == r.team_id).name} is ranked ${r.rank}</li>`
+          ) : ""
+        ) : "Click on a current service to see more info"}</p>
+      </div>
+      <div>
+      </div>
+    </div>
 `
 }
 
