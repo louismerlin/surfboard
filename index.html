@@ -309,7 +309,7 @@ function App () {
           html`<li>${teams.find(({ id }) => id == r.team_id).name} is ranked ${r.rank}</li>`
         ) : ""
         }</ul></div><div></div>`
-      ) : "Click on a current service to see more info"}
+      ) : html`<div>Click on a current service to see more info</div><div></div>`}
     </div>
 `
 }
