@@ -217,14 +217,19 @@ function App () {
   }
 
   useEffect(async () => {
-    const res = await fetch('https://oooverflow.io/dc-ctf-2020-finals/final_tick.json')
-    const scoreboard = await res.json()
-    setScoreboard(scoreboard)
-    setAllTicks(scoreboard.ticks)
-    setTeams(scoreboard.teams)
-    setServices(scoreboard.services)
-    setAllScores(computeAllScores(scoreboard))
-    setTick(scoreboard.current_tick)
+    async function getScoreboard() {
+      const res = await fetch('http://10.13.37.7/game_state/game_state.json')
+      const scoreboard = await res.json()
+      setScoreboard(scoreboard)
+      setAllTicks(scoreboard.ticks)
+      setTeams(scoreboard.teams)
+      setServices(scoreboard.services)
+      setAllScores(computeAllScores(scoreboard))
+      setTick(scoreboard.current_tick)
+    }
+    getScoreboard()
+    const interval = setInterval(getScoreboard, 15000)
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
