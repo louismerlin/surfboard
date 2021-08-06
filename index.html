@@ -313,7 +313,7 @@ function App () {
       ) : (
         html`<div><ul>${
         selectedKohRankings ? selectedKohRankings.results.map(r =>
-          html`<li>${teams.find(({ id }) => id == r.team_id).name} is ranked ${r.rank}</li>`
+          html`<li>${r.rank} - ${teams.find(({ id }) => id == r.team_id).name} [${r.score} points]</li>`
         ) : ""
         }</ul></div><div></div>`
       ) : html`<div>Click on a current service to see more info</div><div></div>`}
