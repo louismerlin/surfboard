@@ -78,6 +78,22 @@ input[type=range] {
   margin: 0 auto;
   width: 80%;
 }
+@media (prefers-color-scheme: dark) {
+
+  .border-left {
+    border-left: 0.3rem solid white;
+  }
+
+  .border-right {
+    border-right: 0.3rem solid white;
+  }
+
+  .fixed {
+    position: fixed;
+    background-color: #121212;
+  }
+
+}
     </style>
 </head>
 <body>
@@ -185,7 +201,7 @@ function App () {
     if (currentScore) {
       setScore(currentScore)
       setSelectedKohRankings(scoreboard.koh_rankings.find(k => k.tick == tick && k.service_id == selectedService))
-      setSelectedExploitationEvents(scoreboard.exploitation_events.filter(e => e.tick == tick && e.service_id == selectedService && e.exploit_team_id == selectedTeam))
+      setSelectedExploitationEvents(scoreboard.exploitation_events.filter(e => e.tick == tick && e.service_id == selectedService && (e.exploit_team_id == selectedTeam || e.victim_team_id == selectedTeam)))
     }
   }, [tick, selectedTeam, selectedService])
 
@@ -239,19 +255,17 @@ function App () {
       <div>
         tick : ${scoreboard.ticks && scoreboard.ticks.find(({ id }) => id == tick).created_on}
       </div>
-      <div>
-        <p>${selectedService ? services.find(({ id }) => id == selectedService).type == "NORMAL" ? (
-          selectedExploitationEvents.map(e =>
-            html`<li>${e.created_on} : ${teams.find(({ id }) => id == e.exploit_team_id).name} exploited ${teams.find(({ id }) => id == e.victim_team_id).name}</li>`
-          )
-        ) : (
-          selectedKohRankings ? selectedKohRankings.results.map(r =>
-            html`<li>${teams.find(({ id }) => id == r.team_id).name} is ranked ${r.rank}</li>`
-          ) : ""
-        ) : "Click on a current service to see more info"}</p>
-      </div>
-      <div>
-      </div>
+      ${selectedService ? services.find(({ id }) => id == selectedService).type == "NORMAL" ? (
+        html`<div><ul>${selectedExploitationEvents.filter(e => e.exploit_team_id == selectedTeam).map(e =>
+          html`<li>${e.created_on} : ${teams.find(({ id }) => id == e.exploit_team_id).name} exploited ${teams.find(({ id }) => id == e.victim_team_id).name}</li>`
+        )}</ul></div><div><ul>${selectedExploitationEvents.filter(e => e.victim_team_id == selectedTeam).map(e =>
+          html`<li>${e.created_on} : ${teams.find(({ id }) => id == e.exploit_team_id).name} exploited ${teams.find(({ id }) => id == e.victim_team_id).name}</li>`
+        )}</ul></div>`
+      ) : (
+        selectedKohRankings ? selectedKohRankings.results.map(r =>
+          html`<li>${teams.find(({ id }) => id == r.team_id).name} is ranked ${r.rank}</li>`
+        ) : ""
+      ) : "Click on a current service to see more info"}
     </div>
 `
 }
